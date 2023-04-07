@@ -1,0 +1,254 @@
+type: edu
+files:
+- name: hacking/hack.py
+  visible: true
+  text: '# write your code here'
+  learner_created: false
+- name: test/__init__.py
+  visible: false
+  learner_created: false
+- name: test/tests.py
+  visible: false
+  text: |
+    from hstest.stage_test import StageTest
+    from hstest.test_case import TestCase
+    from hstest.check_result import CheckResult
+    from threading import Thread
+    from time import sleep
+    import socket
+    import random
+
+    CheckResult.correct = lambda: CheckResult(True, '')
+    CheckResult.wrong = lambda feedback: CheckResult(False, feedback)
+
+    abc = 'abcdefghijklmnopqrstuvwxyz1234567890'
+
+
+    passwords = [
+        'chance', 'frankie', 'killer', 'forest', 'penguin',
+        'jackson', 'rangers', 'monica', 'qweasdzxc', 'explorer',
+        'gabriel', 'chelsea', 'simpsons', 'duncan', 'valentin',
+        'classic', 'titanic', 'logitech', 'fantasy', 'scotland',
+        'pamela', 'christin', 'birdie', 'benjamin', 'jonathan',
+        'knight', 'morgan', 'melissa', 'darkness', 'cassie'
+    ]
+
+
+    def generate_password():
+        '''function - generator of all passwords from dictionary'''
+        for password in passwords:
+            yield password.rstrip().lower()
+
+
+    def random_password():
+        '''function - generating random password from dictionary'''
+        pas = random.choice(list(generate_password()))
+        uppers = []
+        for i in range(len(pas)):
+            uppers.append(random.randint(0, 1))
+
+        return ''.join(
+            pas[j].upper() if uppers[j] == 1
+            else pas[j]
+            for j in range(len(pas)))
+
+
+    class Hacking(StageTest):
+
+        def __init__(self, module):
+            super().__init__(module)
+            self.ready = False
+            self.sock = None
+            self.serv = None
+            self.connected = False
+            self.message = []
+            self.password = None
+
+        def start_server(self):
+            self.serv = Thread(target=lambda: self.server())
+            self.serv.start()
+            self.ready = False
+            while not self.ready:
+                try:
+                    sleep(0.1)  # socket needs to be set up before test
+                except KeyboardInterrupt:
+                    pass
+
+        def stop_server(self):
+            self.sock.close()
+            self.serv.join()
+
+        def server(self):
+            '''function - creating a server and answering clients'''
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.sock.bind(('localhost', 9090))
+            self.ready = True
+            try:
+                self.sock.listen(1)
+                conn, addr = self.sock.accept()
+                self.connected = True
+                conn.settimeout(16)
+                while True:
+                    data = conn.recv(1024)
+                    self.message.append(data.decode('utf8'))
+                    if len(self.message) > 1_000_000:
+                        conn.send('Too many attempts to connect!'.encode('utf8'))
+                        break
+                    if not data:
+                        break
+                    if data.decode('utf8') == self.password:
+                        conn.send('Connection success!'.encode('utf8'))
+                        break
+                    else:
+                        conn.send('Wrong password!'.encode('utf8'))
+                conn.close()
+            except:
+                pass
+
+        def generate(self):
+            self.message = []
+            self.password = random_password()
+            self.start_server()
+            return [TestCase(args=['localhost', '9090'],
+                             attach=[self.password])]
+
+        def check(self, reply, attach):
+            self.stop_server()
+
+            if not self.connected:
+                return CheckResult.wrong("You didn't connect to the server")
+
+            real_password = attach[0]
+            printed_password = reply.split('\n')[0]
+            if reply.split('\n')[0] != real_password:
+                return CheckResult.wrong(
+                    'The password you printed is not correct\n'
+                    'You printed: \"' + printed_password + '\"\n'
+                    'Correct password: \"' + real_password + '\"'
+                )
+
+            return CheckResult.correct()
+
+
+    if __name__ == '__main__':
+        test = Hacking('hacking.hack')
+        test.run_tests()
+        test.stop_server()
+  learner_created: false
+- name: tests.py
+  visible: false
+  text: |
+    from test.tests import Hacking
+
+    if __name__ == '__main__':
+        test = Hacking('hacking.hack')
+        test.run_tests()
+        test.stop_server()
+  learner_created: false
+- name: hacking/tryStuff.py
+  visible: true
+  text: |+
+    import string
+
+
+    def my_generator():
+        i = 0
+        while True:
+            yield i
+            i = i + 1
+
+
+    def sumDigits(integer: int):
+        result = 0
+        while integer != 0:
+            result += integer % 10
+            integer = int(integer / 10)
+        return result
+
+
+    print(sumDigits(309))
+
+
+    def letters(word):
+        for letter in word:
+            yield letter
+
+
+    def myProduct(list1: list, list2: list) -> list:
+        return list([i * j for i, j in zip(list1, list2)])
+
+
+    def myProduct2(list_1, list_2):
+        return list(map(lambda i, j: i * j, list_1, list_2))
+
+
+    list1 = [1, 2, 3]
+    list2 = [4, 5, 6]
+
+
+    def choose_vowels(letters):
+        vowels = ['a', 'e', 'i', 'u', 'o']
+        return list(filter(lambda x: x in vowels, letters))
+
+
+    liste = ['p', 'r', 'o', 'g', 'r', 'a', 'm', 'm', 'i', 'n', 'g', 'l', 'a', 'n', 'g', 'u', 'a', 'g', 'e']
+
+    main_courses = ['beef stew', 'fried fish']
+    price_main_courses = [28, 23]
+
+    desserts = ['ice-cream', 'cake']
+    price_desserts = [2, 4]
+
+    drinks = ['cola', 'wine']
+    price_drinks = [3, 10]
+
+    # main_courses = zip(main_courses, price_main_courses)
+    # desserts = zip(desserts, price_desserts)
+    # drinks = zip(drinks, price_drinks)
+
+    import itertools
+
+
+    meals = [" ".join(i) for i in itertools.product(main_courses, desserts, drinks)]
+
+    prices = itertools.product(price_main_courses, price_desserts, price_drinks)
+
+    totals = [i + j + k for i, j, k in prices]
+
+    totalMeal = zip(meals, totals)
+
+    # for i in totalMeal:
+    #     if i[1] <= 30:
+    #         print(i[0], str(i[1]))
+    #
+    # for i in itertools.product(string.ascii_lowercase, repeat=3):
+    #     print(i)
+
+    alphabet = string.ascii_lowercase
+    numbers = "".join([str(i) for i in range(10)])
+    letters = alphabet + numbers
+
+    passwords = ("".join(i) for i in itertools.product(letters, repeat=1))
+
+    for i in passwords:
+        print(i)
+
+
+
+  learner_created: true
+- name: hacking/passwords.py
+  visible: true
+  learner_created: true
+- name: hacking/passwords.txt
+  visible: true
+  learner_created: true
+- name: passwords.txt
+  visible: true
+  learner_created: true
+feedback_link: https://hyperskill.org/learn/step/7218#comment
+status: Solved
+feedback:
+  message: Congratulations!
+  time: "Thu, 06 Apr 2023 23:28:45 UTC"
+record: 3
